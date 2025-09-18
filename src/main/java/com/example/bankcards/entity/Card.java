@@ -54,7 +54,8 @@ public class Card implements BaseEntity<Long>{
         return Objects.equals(number, card.number)
                && Objects.equals(user.getId(), card.user.getId())
                && Objects.equals(expirationDate, card.expirationDate)
-               && status == card.status && Objects.equals(balance, card.balance);
+               && status == card.status
+               && Objects.equals(balance, card.balance);
     }
 
     @Override
