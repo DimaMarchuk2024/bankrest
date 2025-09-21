@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Value
 @Builder
 public class CardFilter {
+
     String number;
     LocalDate expirationDate;
 }

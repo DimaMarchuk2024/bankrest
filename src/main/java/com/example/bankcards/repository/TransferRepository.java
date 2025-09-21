@@ -16,13 +16,4 @@ public interface TransferRepository extends JpaRepository<Transfer, Long>, Query
     @Query(value = "select t from Transfer t " +
                    "where t.user.id = :userId order by t.transferDate desc")
     Page<Transfer> findAllByUserId(Long userId, Pageable pageable);
-
-    /**
-     * Находит все переводы по фрагменту номера карты, с которой производился перевод,
-     * упорядоченные по дате перевода в обратном порядке.
-     **/
-    @Query(value = "select t from Transfer t " +
-                   "where t.cardFrom like %:cardFrom% order by t.transferDate desc")
-    Page<Transfer> findAllByCardFrom(String cardFrom, Pageable pageable);
-
 }
