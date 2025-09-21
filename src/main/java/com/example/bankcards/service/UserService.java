@@ -2,13 +2,16 @@ package com.example.bankcards.service;
 
 import com.example.bankcards.dto.UserCreateEditDto;
 import com.example.bankcards.dto.UserReadDto;
+import com.example.bankcards.entity.User;
 import com.example.bankcards.filter.UserFilter;
 import com.example.bankcards.mapper.UserCreateEditMapper;
 import com.example.bankcards.mapper.UserReadMapper;
 import com.example.bankcards.predicate.QPredicate;
 import com.example.bankcards.repository.UserRepository;
 import com.querydsl.core.types.Predicate;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,6 +25,7 @@ import java.util.Optional;
 
 import static com.example.bankcards.entity.QUser.user;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -45,9 +49,10 @@ public class UserService implements UserDetailsService {
                 .map(userReadMapper::map);
     }
 
-    public Optional<UserReadDto> findById(Long id) {
+    public UserReadDto findById(Long id) {
         return userRepository.findById(id)
-                .map(userReadMapper::map);
+                .map(userReadMapper::map)
+                .orElseThrow(() -> new EntityNotFoundException("Not found user with id = " + id));
     }
 
     @Transactional
@@ -56,23 +61,29 @@ public class UserService implements UserDetailsService {
                 .map(userCreateEditMapper::map)
                 .map(userRepository::save)
                 .map(userReadMapper::map)
-                .orElseThrow();
+                .orElseThrow(() -> new IllegalArgumentException("Failed to create user"));
     }
 
     @Transactional
-    public Optional<UserReadDto> update(Long id, UserCreateEditDto userCreateEditDto) {
-        return userRepository.findById(id)
+    public UserReadDto update(Long id, UserCreateEditDto userCreateEditDto) {
+        User userForUpdate = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Not found user with id = " + id));
+
+        return Optional.of(userForUpdate)
                 .map(user -> userCreateEditMapper.map(userCreateEditDto, user))
                 .map(userRepository::saveAndFlush)
-                .map(userReadMapper::map);
+                .map(userReadMapper::map)
+                .orElseThrow(() -> new IllegalArgumentException("Failed to update the user with Id = " + id));
     }
 
     @Transactional
     public boolean delete(Long id) {
-        return userRepository.findById(id)
+        return Optional.ofNullable(userRepository.findById(id)
+                        .orElseThrow(() -> new EntityNotFoundException("Not found user with id = " + id)))
                 .map(user -> {
                     userRepository.delete(user);
                     userRepository.flush();
+                    log.info("User with id = " + id + " deleted");
                     return true;
                 })
                 .orElse(false);

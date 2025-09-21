@@ -28,5 +28,6 @@ public class UserCreateEditMapper implements Mapper<UserCreateEditDto, User> {
         user.setRole(userCreateEditDto.getRole());
         user.setBirthDate(userCreateEditDto.getBirthDate());
         user.setPassportNumber(userCreateEditDto.getPassportNumber());
+        user.setPassword(userCreateEditDto.getPassword());
     }
 }
