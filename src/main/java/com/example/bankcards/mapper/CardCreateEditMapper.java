@@ -4,6 +4,7 @@ import com.example.bankcards.dto.CardCreateEditDto;
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.User;
 import com.example.bankcards.repository.UserRepository;
+import com.example.bankcards.util.Base64Codec;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +30,7 @@ public class CardCreateEditMapper implements Mapper<CardCreateEditDto, Card> {
     }
 
     private void copy(CardCreateEditDto cardCreateEditDto, Card card) {
-        card.setNumber(cardCreateEditDto.getNumber());
+        card.setNumber(Base64Codec.encodeCardNumber(cardCreateEditDto.getNumber()));
         card.setUser(getUser(cardCreateEditDto.getUserId()));
         card.setExpirationDate(cardCreateEditDto.getExpirationDate());
         card.setStatus(cardCreateEditDto.getStatus());

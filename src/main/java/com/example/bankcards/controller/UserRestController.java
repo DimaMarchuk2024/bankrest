@@ -56,7 +56,6 @@ public class UserRestController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable("id") Long id) {
         if (!userService.delete(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);        }
     }
 }

@@ -20,4 +20,5 @@ public interface CardRepository extends JpaRepository<Card, Long>, QuerydslPredi
                    "where c.user.id = :userId order by c.expirationDate desc")
     Page<Card> findAllByUserId(Long userId, Pageable pageable, Predicate predicate);
 
+    List<Card> findAllByUserId(Long userId);
 }

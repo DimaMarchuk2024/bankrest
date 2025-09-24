@@ -14,8 +14,8 @@ public class TransferReadDto {
 
     Long id;
     UserReadDto userReadDto;
-    String cardFromDto;
-    String cardToDto;
+    String cardFrom;
+    String cardTo;
     LocalDate transferDate;
     BigDecimal sum;
 }
