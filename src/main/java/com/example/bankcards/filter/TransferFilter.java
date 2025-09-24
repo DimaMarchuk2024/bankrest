@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Builder
 public class TransferFilter {
 
-    String cardFromDto;
-    String cardToDto;
+    String cardFrom;
+    String cardTo;
     LocalDate transferDate;
 }

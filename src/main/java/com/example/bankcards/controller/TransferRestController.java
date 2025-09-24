@@ -43,11 +43,6 @@ public class TransferRestController {
         return transferService.findAllByUserId(id, pageable);
     }
 
-//    @GetMapping("/users/{userId}/transfers")
-//    public Page<TransferReadDto> findAllByCardFrom(String cardFrom, Pageable pageable) {
-//        return transferService.findAllByCardFrom(cardFrom, pageable);
-//    }
-
     @GetMapping("/transfers/{id}")
     public TransferReadDto findById(@PathVariable("id") Long id) {
         return transferService.findById(id);
@@ -58,10 +53,8 @@ public class TransferRestController {
     public TransferReadDto create(@PathVariable("userId") Long userId,
                                   Long idCardFrom,
                                   Long idCardTo,
-                                  BigDecimal sum,
-                                  Pageable pageable,
-                                  CardFilter cardFilter) {
-        return transferService.create(idCardFrom, idCardTo, sum, userId, pageable, cardFilter);
+                                  BigDecimal sum) {
+        return transferService.create(idCardFrom, idCardTo, sum, userId);
     }
 
     @PutMapping("/transfers/{id}")

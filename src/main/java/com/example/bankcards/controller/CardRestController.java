@@ -34,7 +34,6 @@ public class CardRestController {
     @GetMapping("/cards")
     public PageResponse<CardReadDto> findAll(CardFilter cardFilter, Pageable pageable) {
         Page<CardReadDto> page = cardService.findAll(cardFilter, pageable);
-
         return PageResponse.of(page);
     }
 

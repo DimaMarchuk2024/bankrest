@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static com.example.bankcards.entity.QCard.card;
@@ -45,8 +46,8 @@ public class TransferService {
     public Page<TransferReadDto> findAll(TransferFilter transferFilter, Pageable pageable) {
         Predicate predicate = QPredicate.builder()
                 .add(transferFilter.getTransferDate(), transfer.transferDate::after)
-                .add(transferFilter.getCardFromDto(), transfer.cardFrom::contains)
-                .add(transferFilter.getCardToDto(), transfer.cardTo::contains)
+                .add(transferFilter.getCardFrom(), transfer.cardFrom::contains)
+                .add(transferFilter.getCardTo(), transfer.cardTo::contains)
                 .buildAnd();
 
         return transferRepository.findAll(predicate, pageable)
@@ -68,15 +69,8 @@ public class TransferService {
     public TransferReadDto create(Long idCardFrom,
                                   Long idCardTo,
                                   BigDecimal sum,
-                                  Long userId,
-                                  Pageable pageable,
-                                  CardFilter cardFilter) {
-        Predicate predicate = QPredicate.builder()
-                .add(cardFilter.getNumber(), card.number::contains)
-                .add(cardFilter.getExpirationDate(), card.expirationDate::before)
-                .buildAnd();
-
-        Page<Card> cardsByUserId = cardRepository.findAllByUserId(userId, pageable, predicate);
+                                  Long userId) {
+        List<Card> cardsByUserId = cardRepository.findAllByUserId(userId);
 
         Card cardFrom = cardsByUserId.stream()
                 .filter(card -> card.getId().equals(idCardFrom))

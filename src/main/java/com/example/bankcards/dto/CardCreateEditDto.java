@@ -38,4 +38,3 @@ public class CardCreateEditDto {
     @Digits(integer = 100000000, fraction = 2)
     BigDecimal balance;
 }
-
