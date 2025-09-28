@@ -10,5 +10,4 @@ public class ErrorResponseDto {
     String message;
     String detailMessage;
     LocalDateTime errorTime;
-
 }

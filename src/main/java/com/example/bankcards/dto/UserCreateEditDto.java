@@ -9,12 +9,14 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Value;
+import lombok.experimental.FieldNameConstants;
 
 import java.time.LocalDate;
 
 @Builder
 @AllArgsConstructor
 @Value
+@FieldNameConstants
 public class UserCreateEditDto {
 
     @NotBlank

@@ -1,6 +1,5 @@
 package com.example.bankcards.mapper;
 
-
 import com.example.bankcards.dto.CardReadDto;
 import com.example.bankcards.dto.UserReadDto;
 import com.example.bankcards.entity.Card;
@@ -31,7 +30,6 @@ public class CardReadMapper implements Mapper<Card, CardReadDto> {
                 card.getExpirationDate(),
                 card.getStatus(),
                 card.getBalance()
-
         );
     }
 }

@@ -62,10 +62,7 @@ public class CardServiceTest {
 
     @Test
     void findAll() {
-        CardFilter filter = CardFilter.builder()
-                .number("12")
-                .expirationDate(LocalDate.of(2035, 5, 15))
-                .build();
+        CardFilter filter = CardFilter.builder().build();
         PageRequest pageable = PageRequest.of(0, 20);
         Card card = getCard();
         CardReadDto cardReadDto = getCardReadDto();
@@ -82,10 +79,7 @@ public class CardServiceTest {
 
     @Test
     void findAllByUserIdIfUserIdNoTExist() {
-        CardFilter filter = CardFilter.builder()
-                .number("12")
-                .expirationDate(LocalDate.of(2035, 5, 15))
-                .build();
+        CardFilter filter = CardFilter.builder().build();
         PageRequest pageable = PageRequest.of(0, 20);
         Predicate predicate = getPredicate(filter);
         User user = getUser();
@@ -101,8 +95,8 @@ public class CardServiceTest {
     void findByIdSuccess() {
         Card card = getCard();
         CardReadDto cardReadDto = getCardReadDto();
-        Optional<Card> optionalCard = Optional.ofNullable(card);
-        Optional<CardReadDto> optionalCardReadDto = Optional.ofNullable(cardReadDto);
+        Optional<Card> optionalCard = Optional.of(card);
+        Optional<CardReadDto> optionalCardReadDto = Optional.of(cardReadDto);
         doReturn(optionalCard).when(cardRepository).findById(card.getId());
         doReturn(optionalCardReadDto.get()).when(cardReadMapper).map(optionalCard.get());
 
@@ -114,7 +108,7 @@ public class CardServiceTest {
     }
 
     @Test
-    void findByIdFailed() {
+    void findByIdFailedCardNotExist() {
         doReturn(Optional.empty()).when(cardRepository).findById(any());
 
         verifyNoInteractions(cardCreateEditMapper, cardReadMapper);
@@ -124,9 +118,7 @@ public class CardServiceTest {
     @Test
     void getBalanceSuccess() {
         Card card = getCard();
-        CardReadDto cardReadDto = getCardReadDto();
-        Optional<Card> optionalCard = Optional.ofNullable(card);
-        Optional<CardReadDto> optionalCardReadDto = Optional.ofNullable(cardReadDto);
+        Optional<Card> optionalCard = Optional.of(card);
         doReturn(optionalCard).when(cardRepository).findById(card.getId());
 
         BigDecimal actualResult = cardService.getBalance(card.getId());
@@ -137,13 +129,12 @@ public class CardServiceTest {
     }
 
     @Test
-    void getBalanceFailed() {
+    void getBalanceFailedIfCardNotExist() {
         doReturn(Optional.empty()).when(cardRepository).findById(any());
 
         verifyNoInteractions(cardCreateEditMapper, cardReadMapper);
         assertThrows(EntityNotFoundException.class, () -> cardService.getBalance(any()));
     }
-
 
     @Test
     void createSuccess() {
@@ -173,7 +164,7 @@ public class CardServiceTest {
         Card card = getCard();
         CardReadDto cardReadDto = getCardReadDto();
         CardCreateEditDto cardCreateEditDto = getCardCreateEditDto();
-        doReturn(Optional.ofNullable(card)).when(cardRepository).findById(card.getId());
+        doReturn(Optional.of(card)).when(cardRepository).findById(card.getId());
         doReturn(card).when(cardCreateEditMapper).map(cardCreateEditDto, card);
         doReturn(card).when(cardRepository).saveAndFlush(card);
         doReturn(cardReadDto).when(cardReadMapper).map(card);
@@ -186,7 +177,7 @@ public class CardServiceTest {
     }
 
     @Test
-    void updateFailedIfEntityNotFound() {
+    void updateFailedIfCardNotFound() {
         doThrow(EntityNotFoundException.class).when(cardRepository).findById(any());
 
         assertThrows(EntityNotFoundException.class, () -> cardService.update(any(), getCardCreateEditDto()));
@@ -196,7 +187,7 @@ public class CardServiceTest {
     @Test
     void updateFailedIfNoValidValue() {
         Card card = getCard();
-        doReturn(Optional.ofNullable(card)).when(cardRepository).findById(card.getId());
+        doReturn(Optional.of(card)).when(cardRepository).findById(card.getId());
 
         assertThrows(IllegalArgumentException.class, () -> cardService.update(card.getId(), any()));
         verifyNoInteractions(cardReadMapper);
@@ -208,7 +199,7 @@ public class CardServiceTest {
         CardReadDto cardReadDto = CardReadDto.builder()
                 .status(Status.BLOCKED)
                 .build();
-        doReturn(Optional.ofNullable(card)).when(cardRepository).findById(card.getId());
+        doReturn(Optional.of(card)).when(cardRepository).findById(card.getId());
         doReturn(card).when(cardRepository).saveAndFlush(card);
         doReturn(cardReadDto).when(cardReadMapper).map(card);
 
@@ -220,7 +211,7 @@ public class CardServiceTest {
     }
 
     @Test
-    void blockingCardFailedIfNoExistCardId() {
+    void blockingCardFailedIfCardNotFound() {
         doReturn(Optional.empty()).when(cardRepository).findById(any());
 
         assertThrows(EntityNotFoundException.class, () -> cardService.blockingCard(any()));
@@ -231,7 +222,7 @@ public class CardServiceTest {
     void blockingCardFailedIfStatusCardIsBlocked() {
         Card card = getCard();
         card.setStatus(Status.BLOCKED);
-        doReturn(Optional.ofNullable(card)).when(cardRepository).findById(card.getId());
+        doReturn(Optional.of(card)).when(cardRepository).findById(card.getId());
 
         assertThrows(IllegalArgumentException.class, () -> cardService.blockingCard(card.getId()));
         verifyNoInteractions(cardReadMapper);
@@ -242,7 +233,7 @@ public class CardServiceTest {
     void blockingCardFailedIfStatusCardIsExpired() {
         Card card = getCard();
         card.setStatus(Status.EXPIRED);
-        doReturn(Optional.ofNullable(card)).when(cardRepository).findById(card.getId());
+        doReturn(Optional.of(card)).when(cardRepository).findById(card.getId());
 
         assertThrows(IllegalArgumentException.class, () -> cardService.blockingCard(card.getId()));
         verifyNoInteractions(cardReadMapper);
@@ -252,7 +243,7 @@ public class CardServiceTest {
     @Test
     void deleteSuccess() {
         Card card = getCard();
-        doReturn(Optional.ofNullable(card)).when(cardRepository).findById(card.getId());
+        doReturn(Optional.of(card)).when(cardRepository).findById(card.getId());
         doNothing().when(cardRepository).delete(card);
 
         boolean actualResult = cardService.delete(card.getId());
@@ -261,7 +252,7 @@ public class CardServiceTest {
     }
 
     @Test
-    void deleteFailedIfEntityNotFound() {
+    void deleteFailedIfCardNotFound() {
         doThrow(EntityNotFoundException.class).when(cardRepository).findById(any());
 
         assertThrows(EntityNotFoundException.class, () -> cardService.delete(any()));
@@ -284,11 +275,11 @@ public class CardServiceTest {
         User user = getUser();
         return Card.builder()
                 .id(1L)
-                .number("111111")
+                .number("1234123412341234")
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 11, 11))
                 .status(Status.ACTIVE)
-                .balance(BigDecimal.valueOf(0.00))
+                .balance(BigDecimal.valueOf(100.00))
                 .build();
     }
 
@@ -309,7 +300,7 @@ public class CardServiceTest {
         UserReadDto userReadDto = getUserReadDto();
         return CardReadDto.builder()
                 .id(1L)
-                .number("111111")
+                .number("1234132412341234")
                 .userReadDto(userReadDto)
                 .expirationDate(LocalDate.of(2030, 11, 11))
                 .status(Status.ACTIVE)
@@ -333,15 +324,15 @@ public class CardServiceTest {
         User user = getUser();
         Card card1 = Card.builder()
                 .id(1L)
-                .number("111111")
+                .number("1234123412341234")
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 11, 11))
                 .status(Status.ACTIVE)
-                .balance(BigDecimal.valueOf(0.00))
+                .balance(BigDecimal.valueOf(100.00))
                 .build();
         Card card2 = Card.builder()
                 .id(2L)
-                .number("222222")
+                .number("4321432143214321")
                 .user(user)
                 .expirationDate(LocalDate.of(2035, 12, 12))
                 .status(Status.ACTIVE)

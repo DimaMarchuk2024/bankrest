@@ -1,6 +1,5 @@
 package com.example.bankcards.util;
 
-
 import lombok.experimental.UtilityClass;
 
 import java.nio.charset.StandardCharsets;
@@ -9,7 +8,7 @@ import java.util.Base64;
 @UtilityClass
 public class Base64Codec {
 
-    private static String codeWord = "bank_rest";
+    private static final String codeWord = "bank_rest";
 
     public static String encodeCardNumber(String cardNumber) {
         byte[] cardNumberBytes = cardNumber.getBytes(StandardCharsets.UTF_8);

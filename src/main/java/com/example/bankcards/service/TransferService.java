@@ -5,14 +5,13 @@ import com.example.bankcards.dto.TransferReadDto;
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.Transfer;
 import com.example.bankcards.enumpack.Status;
-import com.example.bankcards.filter.CardFilter;
 import com.example.bankcards.filter.TransferFilter;
 import com.example.bankcards.mapper.TransferCreateEditMapper;
 import com.example.bankcards.mapper.TransferReadMapper;
 import com.example.bankcards.predicate.QPredicate;
 import com.example.bankcards.repository.CardRepository;
 import com.example.bankcards.repository.TransferRepository;
-import com.example.bankcards.repository.UserRepository;
+import com.example.bankcards.util.Base64Codec;
 import com.querydsl.core.types.Predicate;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static com.example.bankcards.entity.QCard.card;
 import static com.example.bankcards.entity.QTransfer.transfer;
-
 
 @Slf4j
 @Service
@@ -38,7 +34,6 @@ import static com.example.bankcards.entity.QTransfer.transfer;
 public class TransferService {
 
     private final TransferRepository transferRepository;
-    private final UserRepository userRepository;
     private final CardRepository cardRepository;
     private final TransferReadMapper transferReadMapper;
     private final TransferCreateEditMapper transferCreateEditMapper;
@@ -66,23 +61,23 @@ public class TransferService {
     }
 
     @Transactional
-    public TransferReadDto create(Long idCardFrom,
-                                  Long idCardTo,
-                                  BigDecimal sum,
-                                  Long userId) {
+    public TransferReadDto create(TransferCreateEditDto transferCreateEditDto) {
+        String numberCardFrom = transferCreateEditDto.getCardFrom();
+        String numberCardTo = transferCreateEditDto.getCardTo();
+        BigDecimal sum = transferCreateEditDto.getSum();
+        Long userId = transferCreateEditDto.getUserId();
+
         List<Card> cardsByUserId = cardRepository.findAllByUserId(userId);
-
         Card cardFrom = cardsByUserId.stream()
-                .filter(card -> card.getId().equals(idCardFrom))
+                .filter(card -> Base64Codec.decodeCardNumber(card.getNumber()).equals(numberCardFrom))
                 .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Not found card with id = " + idCardFrom));
-
+                .orElseThrow(() -> new EntityNotFoundException("Not found card with number = " + numberCardFrom));
         Card cardTo = cardsByUserId.stream()
-                .filter(card -> card.getId().equals(idCardTo))
+                .filter(card -> Base64Codec.decodeCardNumber(card.getNumber()).equals(numberCardTo))
                 .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Not found card with id = " + idCardTo));
+                .orElseThrow(() -> new EntityNotFoundException("Not found card with id = " + numberCardTo));
 
-        if (idCardFrom.equals(idCardTo)) {
+        if (numberCardFrom.equals(numberCardTo)) {
             throw new IllegalArgumentException("Select different accounts");
         } else if (cardFrom.getBalance().compareTo(sum) < 0) {
             throw new IllegalArgumentException("Insufficient funds on the card");
@@ -96,17 +91,11 @@ public class TransferService {
             cardTo.setBalance(cardTo.getBalance().add(sum));
             cardRepository.saveAndFlush(cardTo);
 
-            Transfer transfer = Transfer.builder()
-                    .user(userRepository.findById(userId)
-                            .orElseThrow(() -> new EntityNotFoundException("Not found user with id = " + userId)))
-                    .cardFrom(cardFrom.getNumber())
-                    .cardTo(cardTo.getNumber())
-                    .transferDate(LocalDate.now())
-                    .sum(sum)
-                    .build();
-            Transfer transferResult = transferRepository.saveAndFlush(transfer);
-            log.info("Transfer was completed successfully");
-            return transferReadMapper.map(transferResult);
+            return Optional.of(transferCreateEditDto)
+                    .map(transferCreateEditMapper::map)
+                    .map(transferRepository::save)
+                    .map(transferReadMapper::map)
+                    .orElseThrow();
         }
     }
 

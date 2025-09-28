@@ -16,7 +16,7 @@ public class RestControllerExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleGenericException(Exception e) {
-        log.error("handle Exception", e);
+        log.error("Handle Exception", e);
         ErrorResponseDto errorResponseDto = new ErrorResponseDto(
                 "Internal server error",
                 e.getMessage(),
@@ -27,10 +27,9 @@ public class RestControllerExceptionHandler {
                 .body(errorResponseDto);
     }
 
-
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleEntityNotFoundException(EntityNotFoundException e) {
-        log.error("handle EntityNotFoundException", e);
+        log.error("Handle EntityNotFoundException", e);
         ErrorResponseDto errorResponseDto = new ErrorResponseDto(
                 "Entity not found",
                 e.getMessage(),
@@ -47,7 +46,7 @@ public class RestControllerExceptionHandler {
             MethodArgumentNotValidException.class
     })
     public ResponseEntity<ErrorResponseDto> handleBadRequest(Exception e) {
-        log.error("handle BadRequest", e);
+        log.error("Handle BadRequest", e);
         ErrorResponseDto errorResponseDto = new ErrorResponseDto(
                 "Bad request",
                 e.getMessage(),

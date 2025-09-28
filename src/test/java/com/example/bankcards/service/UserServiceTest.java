@@ -52,10 +52,7 @@ public class UserServiceTest {
 
     @Test
     void findAll() {
-        UserFilter filter = UserFilter.builder()
-                .lastname("ov")
-                .birthDate(LocalDate.of(2020, 5, 15))
-                .build();
+        UserFilter filter = UserFilter.builder().build();
         PageRequest pageable = PageRequest.of(0, 20);
         User user = getUser();
         UserReadDto userReadDto = getUserReadDto();
@@ -74,8 +71,8 @@ public class UserServiceTest {
     void findByIdSuccess() {
         User user = getUser();
         UserReadDto userReadDto = getUserReadDto();
-        Optional<User> optionalUser = Optional.ofNullable(user);
-        Optional<UserReadDto> optionalUserReadDto = Optional.ofNullable(userReadDto);
+        Optional<User> optionalUser = Optional.of(user);
+        Optional<UserReadDto> optionalUserReadDto = Optional.of(userReadDto);
         doReturn(optionalUser).when(userRepository).findById(user.getId());
         doReturn(optionalUserReadDto.get()).when(userReadMapper).map(optionalUser.get());
 
@@ -122,7 +119,7 @@ public class UserServiceTest {
         User user = getUser();
         UserReadDto userReadDto = getUserReadDto();
         UserCreateEditDto userCreateEditDto = getUserCreateEditDto();
-        doReturn(Optional.ofNullable(user)).when(userRepository).findById(user.getId());
+        doReturn(Optional.of(user)).when(userRepository).findById(user.getId());
         doReturn(user).when(userCreateEditMapper).map(userCreateEditDto, user);
         doReturn(user).when(userRepository).saveAndFlush(user);
         doReturn(userReadDto).when(userReadMapper).map(user);
@@ -145,7 +142,7 @@ public class UserServiceTest {
     @Test
     void updateFailedIfNoValidValue() {
         User user = getUser();
-        doReturn(Optional.ofNullable(user)).when(userRepository).findById(user.getId());
+        doReturn(Optional.of(user)).when(userRepository).findById(user.getId());
 
         assertThrows(IllegalArgumentException.class, () -> userService.update(user.getId(), any()));
         verifyNoInteractions(userReadMapper);
@@ -154,7 +151,7 @@ public class UserServiceTest {
     @Test
     void deleteSuccess() {
         User user = getUser();
-        doReturn(Optional.ofNullable(user)).when(userRepository).findById(user.getId());
+        doReturn(Optional.of(user)).when(userRepository).findById(user.getId());
         doNothing().when(userRepository).delete(user);
 
         boolean actualResult = userService.delete(user.getId());
@@ -205,34 +202,6 @@ public class UserServiceTest {
                 .birthDate(LocalDate.of(2000, 11, 11))
                 .passportNumber("HB111111")
                 .build();
-    }
-
-
-    private static Page<UserReadDto> getPageUserReadDto() {
-        List<UserReadDto> userReadDtoList = new ArrayList<>();
-        UserReadDto ivan = UserReadDto.builder()
-                .id(1L)
-                .firstname("Ivan")
-                .lastname("Ivanov")
-                .passportNumber("11-11-111")
-                .email("ivan@gmail.com")
-                .role(Role.USER)
-                .birthDate(LocalDate.of(2000, 11, 11))
-                .passportNumber("HB111111")
-                .build();
-        UserReadDto petr = UserReadDto.builder()
-                .id(2L)
-                .firstname("Petr")
-                .lastname("Petrov")
-                .passportNumber("22-22-222")
-                .email("petr@gmail.com")
-                .role(Role.ADMIN)
-                .birthDate(LocalDate.of(2005, 12, 22))
-                .passportNumber("HB22222")
-                .build();
-        userReadDtoList.add(ivan);
-        userReadDtoList.add(petr);
-        return new PageImpl<>(userReadDtoList);
     }
 
     private static Page<User> getPageUser() {
