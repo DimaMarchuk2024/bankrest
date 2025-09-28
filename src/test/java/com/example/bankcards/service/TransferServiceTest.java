@@ -14,7 +14,7 @@ import com.example.bankcards.mapper.TransferReadMapper;
 import com.example.bankcards.predicate.QPredicate;
 import com.example.bankcards.repository.CardRepository;
 import com.example.bankcards.repository.TransferRepository;
-import com.example.bankcards.repository.UserRepository;
+import com.example.bankcards.util.Base64Codec;
 import com.querydsl.core.types.Predicate;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -57,19 +57,12 @@ class TransferServiceTest {
     @Mock
     private CardRepository cardRepository;
 
-    @Mock
-    private UserRepository userRepository;
-
     @InjectMocks
     private TransferService transferService;
 
     @Test
     void findAll() {
-        TransferFilter filter = TransferFilter.builder()
-                .cardFrom("111111111")
-                .cardTo("222222222")
-                .transferDate(LocalDate.now())
-                .build();
+        TransferFilter filter = TransferFilter.builder().build();
         PageRequest pageable = PageRequest.of(0, 20);
         Transfer transfer = getTransfer();
         TransferReadDto transferReadDto = getTransferReadDto();
@@ -88,8 +81,8 @@ class TransferServiceTest {
     void findByIdSuccess() {
         Transfer transfer = getTransfer();
         TransferReadDto transferReadDto = getTransferReadDto();
-        Optional<Transfer> optionalTransfer = Optional.ofNullable(transfer);
-        Optional<TransferReadDto> optionalTransferReadDto = Optional.ofNullable(transferReadDto);
+        Optional<Transfer> optionalTransfer = Optional.of(transfer);
+        Optional<TransferReadDto> optionalTransferReadDto = Optional.of(transferReadDto);
         doReturn(optionalTransfer).when(transferRepository).findById(transfer.getId());
         doReturn(optionalTransferReadDto.get()).when(transferReadMapper).map(optionalTransfer.get());
 
@@ -101,7 +94,7 @@ class TransferServiceTest {
     }
 
     @Test
-    void findByIdFailed() {
+    void findByIdFailedIfTransferNotFound() {
         doReturn(Optional.empty()).when(transferRepository).findById(any());
 
         verifyNoInteractions(transferCreateEditMapper, transferReadMapper);
@@ -125,7 +118,7 @@ class TransferServiceTest {
     }
 
     @Test
-    void findAllByUserIdIfUserIdNoTExist() {
+    void findAllByUserIdIfUserCardsNotFound() {
         PageRequest pageable = PageRequest.of(0, 20);
         User user = getUser();
         doReturn(Page.empty()).when(transferRepository).findAllByUserId(user.getId(), pageable);
@@ -139,25 +132,20 @@ class TransferServiceTest {
     @Test
     void createSuccess() {
         User user = getUser();
+        TransferCreateEditDto transferCreateEditDto = getTransferCreateEditDto();
+        TransferReadDto transferReadDto = getTransferReadDto();
         List<Card> cardList = getListCard();
+        Transfer transfer = getTransfer();
         Card cardFrom = cardList.get(0);
         Card cardTo = cardList.get(1);
         doReturn(cardList).when(cardRepository).findAllByUserId(user.getId());
         doReturn(cardFrom).when(cardRepository).saveAndFlush(cardFrom);
         doReturn(cardTo).when(cardRepository).saveAndFlush(cardTo);
-        doReturn(Optional.of(user)).when(userRepository).findById(user.getId());
-        Transfer transfer = Transfer.builder()
-                .user(user)
-                .cardFrom(cardFrom.getNumber())
-                .cardTo(cardTo.getNumber())
-                .transferDate(LocalDate.now())
-                .sum(BigDecimal.valueOf(50))
-                .build();
-        doReturn(transfer).when(transferRepository).saveAndFlush(transfer);
-        TransferReadDto transferReadDto = getTransferReadDto();
+        doReturn(transfer).when(transferCreateEditMapper).map(transferCreateEditDto);
+        doReturn(transfer).when(transferRepository).save(transfer);
         doReturn(transferReadDto).when(transferReadMapper).map(transfer);
 
-        TransferReadDto actualResult = transferService.create(cardFrom.getId(), cardTo.getId(), transfer.getSum(), user.getId());
+        TransferReadDto actualResult = transferService.create(transferCreateEditDto);
 
         assertThat(actualResult.getCardFrom()).isEqualTo(transferReadDto.getCardFrom());
         assertThat(actualResult.getCardTo()).isEqualTo(transferReadDto.getCardTo());
@@ -165,31 +153,36 @@ class TransferServiceTest {
         verify(cardRepository).findAllByUserId(user.getId());
         verify(cardRepository).saveAndFlush(cardFrom);
         verify(cardRepository).saveAndFlush(cardTo);
-        verify(userRepository).findById(user.getId());
-        verify(transferRepository).saveAndFlush(transfer);
+        verify(transferRepository).save(transfer);
     }
 
     @Test
-    void createFailedIfNoTExistCardId() {
+    void createFailedIfUserCardsNotFound() {
         User user = getUser();
+        TransferCreateEditDto transferCreateEditDto = getTransferCreateEditDto();
         List<Card> cardList = new ArrayList<>();
         doReturn(cardList).when(cardRepository).findAllByUserId(user.getId());
-        Card cardFrom = Card.builder().build();
-        Card cardTo = Card.builder().build();
 
-        assertThrows(EntityNotFoundException.class, () -> transferService.create(cardFrom.getId(), cardTo.getId(), any(), user.getId()));
-        verifyNoInteractions(transferReadMapper, userRepository, transferRepository);
+        assertThrows(EntityNotFoundException.class, () -> transferService.create(transferCreateEditDto));
+        verifyNoInteractions(transferReadMapper, transferRepository);
     }
 
     @Test
-    void createFailedIfIdCardFromEqualsIdCardTo() {
+    void createFailedIfNumberCardFromEqualsNumberCardTo() {
         User user = getUser();
-        List<Card> cardList = getListCard();
+        Card card = getCard();
+        List<Card> cardList = new ArrayList<>();
+        cardList.add(card);
+        cardList.add(card);
         doReturn(cardList).when(cardRepository).findAllByUserId(user.getId());
-        Card cardFrom = cardList.get(0);
-        Card cardTo = cardList.get(0);
+        TransferCreateEditDto transferCreateEditDto = TransferCreateEditDto.builder()
+                .userId(user.getId())
+                .cardFrom("1234123412341234")
+                .cardTo("1234123412341234")
+                .sum(BigDecimal.valueOf(50))
+                .build();
 
-        assertThrows(IllegalArgumentException.class, () -> transferService.create(cardFrom.getId(), cardTo.getId(), any(), user.getId()));
+        assertThrows(IllegalArgumentException.class, () -> transferService.create(transferCreateEditDto));
         verifyNoInteractions(transferReadMapper, transferRepository);
         verify(cardRepository).findAllByUserId(user.getId());
     }
@@ -199,11 +192,14 @@ class TransferServiceTest {
         User user = getUser();
         List<Card> cardList = getListCard();
         doReturn(cardList).when(cardRepository).findAllByUserId(user.getId());
-        Card cardFrom = cardList.get(0);
-        Card cardTo = cardList.get(1);
-        BigDecimal sum = BigDecimal.valueOf(1000);
+        TransferCreateEditDto transferCreateEditDto = TransferCreateEditDto.builder()
+                .userId(user.getId())
+                .cardFrom("1234123412341234")
+                .cardTo("4321432143214321")
+                .sum(BigDecimal.valueOf(1000.00))
+                .build();
 
-        assertThrows(IllegalArgumentException.class, () -> transferService.create(cardFrom.getId(), cardTo.getId(), sum, user.getId()));
+        assertThrows(IllegalArgumentException.class, () -> transferService.create(transferCreateEditDto));
         verifyNoInteractions(transferReadMapper, transferRepository);
         verify(cardRepository).findAllByUserId(user.getId());
     }
@@ -211,29 +207,27 @@ class TransferServiceTest {
     @Test
     void createFailedIfCardIsBlocked() {
         User user = getUser();
+        TransferCreateEditDto transferCreateEditDto = getTransferCreateEditDto();
         List<Card> cardList = getListCard();
         doReturn(cardList).when(cardRepository).findAllByUserId(user.getId());
         Card cardFrom = cardList.get(0);
         cardFrom.setStatus(Status.BLOCKED);
-        Card cardTo = cardList.get(1);
-        BigDecimal sum = BigDecimal.valueOf(50);
 
-        assertThrows(IllegalArgumentException.class, () -> transferService.create(cardFrom.getId(), cardTo.getId(), sum, user.getId()));
+        assertThrows(IllegalArgumentException.class, () -> transferService.create(transferCreateEditDto));
         verifyNoInteractions(transferReadMapper, transferRepository);
         verify(cardRepository).findAllByUserId(user.getId());
     }
 
     @Test
-    void createFailedIfCardExpired() {
+    void createFailedIfCardIsExpired() {
         User user = getUser();
+        TransferCreateEditDto transferCreateEditDto = getTransferCreateEditDto();
         List<Card> cardList = getListCard();
         doReturn(cardList).when(cardRepository).findAllByUserId(user.getId());
         Card cardFrom = cardList.get(0);
         cardFrom.setStatus(Status.EXPIRED);
-        Card cardTo = cardList.get(1);
-        BigDecimal sum = BigDecimal.valueOf(50);
 
-        assertThrows(IllegalArgumentException.class, () -> transferService.create(cardFrom.getId(), cardTo.getId(), sum, user.getId()));
+        assertThrows(IllegalArgumentException.class, () -> transferService.create(transferCreateEditDto));
         verifyNoInteractions(transferReadMapper, transferRepository);
         verify(cardRepository).findAllByUserId(user.getId());
     }
@@ -243,7 +237,7 @@ class TransferServiceTest {
         Transfer transfer = getTransfer();
         TransferReadDto transferReadDto = getTransferReadDto();
         TransferCreateEditDto transferCreateEditDto = getTransferCreateEditDto();
-        doReturn(Optional.ofNullable(transfer)).when(transferRepository).findById(transfer.getId());
+        doReturn(Optional.of(transfer)).when(transferRepository).findById(transfer.getId());
         doReturn(transfer).when(transferCreateEditMapper).map(transferCreateEditDto, transfer);
         doReturn(transfer).when(transferRepository).saveAndFlush(transfer);
         doReturn(transferReadDto).when(transferReadMapper).map(transfer);
@@ -256,7 +250,7 @@ class TransferServiceTest {
     }
 
     @Test
-    void updateFailedIfEntityNotFound() {
+    void updateFailedIfTransferNotFound() {
         doThrow(EntityNotFoundException.class).when(transferRepository).findById(any());
 
         assertThrows(EntityNotFoundException.class, () -> transferService.update(any(), getTransferCreateEditDto()));
@@ -266,7 +260,7 @@ class TransferServiceTest {
     @Test
     void updateFailedIfNoValidValue() {
         Transfer transfer = getTransfer();
-        doReturn(Optional.ofNullable(transfer)).when(transferRepository).findById(transfer.getId());
+        doReturn(Optional.of(transfer)).when(transferRepository).findById(transfer.getId());
 
         assertThrows(IllegalArgumentException.class, () -> transferService.update(transfer.getId(), any()));
         verifyNoInteractions(transferReadMapper);
@@ -275,7 +269,7 @@ class TransferServiceTest {
     @Test
     void deleteSuccess() {
         Transfer transfer = getTransfer();
-        doReturn(Optional.ofNullable(transfer)).when(transferRepository).findById(transfer.getId());
+        doReturn(Optional.of(transfer)).when(transferRepository).findById(transfer.getId());
         doNothing().when(transferRepository).delete(transfer);
 
         boolean actualResult = transferService.delete(transfer.getId());
@@ -284,7 +278,7 @@ class TransferServiceTest {
     }
 
     @Test
-    void deleteFailedIfEntityNotFound() {
+    void deleteFailedIfTransferNotFound() {
         doThrow(EntityNotFoundException.class).when(transferRepository).findById(any());
 
         assertThrows(EntityNotFoundException.class, () -> transferService.delete(any()));
@@ -308,10 +302,10 @@ class TransferServiceTest {
         return Transfer.builder()
                 .id(1L)
                 .user(user)
-                .cardFrom("111111111")
-                .cardTo("222222222")
+                .cardFrom("1234123412341234")
+                .cardTo("4321432143214321")
                 .transferDate(LocalDate.now())
-                .sum(BigDecimal.valueOf(100.00))
+                .sum(BigDecimal.valueOf(50.00))
                 .build();
     }
 
@@ -333,10 +327,10 @@ class TransferServiceTest {
         return TransferReadDto.builder()
                 .id(1L)
                 .userReadDto(userReadDto)
-                .cardFrom("111111111")
-                .cardTo("222222222")
+                .cardFrom("1234123412341234")
+                .cardTo("4321432143214321")
                 .transferDate(LocalDate.now())
-                .sum(BigDecimal.valueOf(100.00))
+                .sum(BigDecimal.valueOf(50.00))
                 .build();
     }
 
@@ -344,10 +338,9 @@ class TransferServiceTest {
         User user = getUser();
         return TransferCreateEditDto.builder()
                 .userId(user.getId())
-                .cardFrom("111111111")
-                .cardTo("222222222")
-                .transferDate(LocalDate.now())
-                .sum(BigDecimal.valueOf(100.00))
+                .cardFrom("1234123412341234")
+                .cardTo("4321432143214321")
+                .sum(BigDecimal.valueOf(50.00))
                 .build();
     }
 
@@ -357,16 +350,16 @@ class TransferServiceTest {
         Transfer transfer1 = Transfer.builder()
                 .id(1L)
                 .user(user)
-                .cardFrom("111111111")
-                .cardTo("222222222")
+                .cardFrom("1234123412341234")
+                .cardTo("4321432143214321")
                 .transferDate(LocalDate.now())
-                .sum(BigDecimal.valueOf(100.00))
+                .sum(BigDecimal.valueOf(50.00))
                 .build();
         Transfer transfer2 = Transfer.builder()
                 .id(2L)
                 .user(user)
-                .cardFrom("111111111")
-                .cardTo("222222222")
+                .cardFrom("1234123412341234")
+                .cardTo("4321432143214321")
                 .transferDate(LocalDate.now())
                 .sum(BigDecimal.valueOf(50.00))
                 .build();
@@ -380,7 +373,7 @@ class TransferServiceTest {
         User user = getUser();
         Card card1 = Card.builder()
                 .id(1L)
-                .number("111111")
+                .number(Base64Codec.encodeCardNumber("1234123412341234"))
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 11, 11))
                 .status(Status.ACTIVE)
@@ -388,7 +381,7 @@ class TransferServiceTest {
                 .build();
         Card card2 = Card.builder()
                 .id(2L)
-                .number("222222")
+                .number(Base64Codec.encodeCardNumber("4321432143214321"))
                 .user(user)
                 .expirationDate(LocalDate.of(2035, 12, 12))
                 .status(Status.ACTIVE)
@@ -397,6 +390,18 @@ class TransferServiceTest {
         cardList.add(card1);
         cardList.add(card2);
         return cardList;
+    }
+
+    private static Card getCard() {
+        User user = getUser();
+        return Card.builder()
+                .id(1L)
+                .number(Base64Codec.encodeCardNumber("1234123412341234"))
+                .user(user)
+                .expirationDate(LocalDate.of(2030, 11, 11))
+                .status(Status.ACTIVE)
+                .balance(BigDecimal.valueOf(100.00))
+                .build();
     }
 
     private static Predicate getPredicate(TransferFilter transferFilter) {

@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/bankrest
+    url: jdbc:postgresql://db:5432/bankdb
     username: postgres
-    password: hpbox4720
+    password: password
     driver-class-name: org.postgresql.Driver
   jpa:
     properties:
@@ -10,3 +10,6 @@ spring:
         format_sql: true
         show_sql: true
     open-in-view: false
+springdoc:
+  swagger-ui:
+    url: /openapi.yml

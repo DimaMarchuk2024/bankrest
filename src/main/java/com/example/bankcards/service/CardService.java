@@ -80,7 +80,7 @@ public class CardService {
                 .orElseThrow(() -> new EntityNotFoundException("Not found card with id = " + id));
 
         return Optional.of(cardForUpdate)
-                .map(user -> cardCreateEditMapper.map(cardCreateEditDto, user))
+                .map(card -> cardCreateEditMapper.map(cardCreateEditDto, card))
                 .map(cardRepository::saveAndFlush)
                 .map(cardReadMapper::map)
                 .orElseThrow(() -> new IllegalArgumentException("Failed to update the card with Id = " + id));

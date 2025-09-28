@@ -11,5 +11,4 @@ public class BankCardMask {
     public static String getNumberCardMask(String numberCard) {
         return numberCard.replaceAll(PATTERN, REPLACE);
     }
-
 }
